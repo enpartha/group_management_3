@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/member.dart';
 import '../providers/group_members.dart';
+import '../providers/my_groups.dart';
 
 class ViewGroupDetails extends StatelessWidget {
   static const routeName = '/group_details';
@@ -8,12 +10,16 @@ class ViewGroupDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pageTitle = ModalRoute.of(context)?.settings.arguments as String;
-    List<Member> groupMembers = Members.members;
+    final groupId = ModalRoute.of(context)?.settings.arguments as String;
+    final group = Provider.of<Groups>(context).findById(groupId);
+    final allMembers = Provider.of<Members>(context).items;
+    List<Member> groupMembers =
+        allMembers.where((member) => member.groupId == groupId).toList();
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
-        title: Text(pageTitle),
+        title: Text(group.groupName),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
@@ -41,8 +47,11 @@ class ViewGroupDetails extends StatelessWidget {
                             radius: 30,
                           ),
                           title: Text(groupMembers[index].name),
-                          subtitle: Text(
-                              'Level: ' + groupMembers[index].seniorityLevel),
+                          subtitle: Text(groupMembers[index].id == group.adminId
+                              ? 'Level: ' +
+                                  groupMembers[index].seniorityLevel +
+                                  '    -> Admin'
+                              : 'Level: ' + groupMembers[index].seniorityLevel),
                           trailing: PopupMenuButton(
 //                             onSelected: (value) {
 //                             if (value == 'remove'){
@@ -55,7 +64,21 @@ class ViewGroupDetails extends StatelessWidget {
                                 value: 'remove',
                                 child: Text('Remove'),
                               ),
+                              PopupMenuItem(
+                                value: 'SetAdmin',
+                                child: Text('Set as Admin'),
+                              ),
                             ],
+                            onSelected: (value) {
+                              if (value == 'SetAdmin') {
+                                Provider.of<Groups>(ctx, listen: false)
+                                    .updateAdmin(
+                                        groupId, groupMembers[index].id);
+                              } else if (value == 'remove') {
+                                Provider.of<Members>(ctx, listen: false)
+                                    .removeMember(groupMembers[index].id);
+                              }
+                            },
                           ),
                         )
                       ],

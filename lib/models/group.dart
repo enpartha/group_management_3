@@ -1,3 +1,4 @@
+import '../models/member.dart';
 import 'package:flutter/foundation.dart';
 
 class Group with ChangeNotifier {
@@ -5,13 +6,19 @@ class Group with ChangeNotifier {
   String? hospitalName;
   String? departmentName;
   String? id;
+  String? memberCount;
+  List<String> memberList;
+  String? adminId;
   // List<Member> groupMembers=[];
 
   Group({
-    required this.groupName,
+    this.groupName = '',
     this.hospitalName = '',
     this.departmentName = '',
     this.id,
+    this.memberCount,
+    this.memberList = const [],
+    this.adminId,
 
 // this.groupMembers,
   })

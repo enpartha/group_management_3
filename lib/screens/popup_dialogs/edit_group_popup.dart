@@ -1,10 +1,11 @@
 // import 'package:cytoapp1/providers/my_groups.dart';
-import '../../screens/manage_groups.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/group.dart';
 import '../../providers/my_groups.dart';
+import '../../screens/manage_groups.dart';
 
 class EditGroupPopUp extends StatefulWidget {
   final String? groupId = ManageGroupsPage.groupId;
@@ -35,6 +36,7 @@ class _EditGroupPopUpState extends State<EditGroupPopUp> {
     'department': '',
   };
   var _isInit = true;
+  var _isLoading = false;
 
   @override
   void didChangeDependencies() {
@@ -63,158 +65,197 @@ class _EditGroupPopUpState extends State<EditGroupPopUp> {
     super.dispose();
   }
 
-  void _saveForm() {
+  Future<void> _saveForm() async {
     final id = EditGroupPopUp().groupId;
     final isValid = _formKey.currentState!.validate();
     if (!isValid) {
       return;
     }
     _formKey.currentState!.save();
+    setState(() {
+      _isLoading = true;
+    });
     if (id != null) {
-      Provider.of<Groups>(context, listen: false).updateGroup(id, _editedGroup);
+      await Provider.of<Groups>(context, listen: false)
+          .updateGroup(id, _editedGroup);
+      setState(() {
+        _isLoading = false;
+      });
+      Navigator.pop(context);
     } else {
-      Provider.of<Groups>(context, listen: false).addGroup(_editedGroup);
+      try {
+        await Provider.of<Groups>(context, listen: false)
+            .addGroup(_editedGroup);
+      } catch (error) {
+        await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text('An error occurred!'),
+            content: Text('Something went wrong.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Okay'),
+              ),
+            ],
+          ),
+        );
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+
+        Navigator.pop(context);
+      }
     }
-    Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     // print(EditGroupPopUp().groupId);
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-            topRight: Radius.circular(25), bottomLeft: Radius.circular(25)),
-      ),
-      elevation: 16,
-      child: Container(
-        child: ListView(
-          shrinkWrap: true,
-          children: <Widget>[
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(15.0),
-                child: Text(
-                  "Enter Group Details",
-                  style: TextStyle(
-                      fontSize: 24,
-                      color: Colors.blueGrey[800],
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
+    return _isLoading
+        ? Center(
+            child: CircularProgressIndicator(),
+          )
+        : Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(25),
+                  bottomLeft: Radius.circular(25)),
             ),
-            Form(
-              key: _formKey,
+            elevation: 16,
+            child: Container(
               child: ListView(
                 shrinkWrap: true,
                 children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.only(top: 5),
-                    child: Divider(
-                      height: 2,
-                      thickness: 2,
-                      color: Colors.blue,
-                    ),
-                  ),
-                  ListTile(
-                    leading: Container(
-                      height: double.infinity,
-                      child: Icon(
-                        Icons.group,
-                        color: Colors.black,
-                      ),
-                    ),
-                    title: TextFormField(
-                      initialValue: _initValues['name'],
-                      decoration: InputDecoration(labelText: 'Group Name'),
-                      textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) {
-                        FocusScope.of(context).requestFocus(_hospitalFocusNode);
-                      },
-                      onSaved: (value) {
-                        _editedGroup = Group(
-                          groupName: value.toString(),
-                          hospitalName: _editedGroup.hospitalName,
-                          departmentName: _editedGroup.departmentName,
-                        );
-                      },
-                      validator: (value) {
-                        if (value!.isEmpty) {
-                          return 'Please provide a name.';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  ListTile(
-                    leading: Container(
-                      height: double.infinity,
-                      child: Icon(
-                        Icons.local_hospital,
-                        color: Colors.black,
-                      ),
-                    ),
-                    title: TextFormField(
-                      initialValue: _initValues['hospital'],
-                      decoration: InputDecoration(labelText: "Hospital Name"),
-                      textInputAction: TextInputAction.next,
-                      focusNode: _hospitalFocusNode,
-                      onFieldSubmitted: (_) {
-                        FocusScope.of(context)
-                            .requestFocus(_departmentFocusNode);
-                      },
-                      onSaved: (value) {
-                        _editedGroup = Group(
-                          groupName: _editedGroup.groupName,
-                          hospitalName: value,
-                          departmentName: _editedGroup.departmentName,
-                        );
-                      },
-                    ),
-                  ),
-                  ListTile(
-                    leading: Container(
-                      height: double.infinity,
-                      child: Icon(
-                        Icons.share,
-                        color: Colors.black,
-                      ),
-                    ),
-                    title: TextFormField(
-                      initialValue: _initValues['department'],
-                      decoration: InputDecoration(labelText: "Department"),
-                      focusNode: _departmentFocusNode,
-                      onFieldSubmitted: (_) {
-                        _saveForm();
-                      },
-                      onSaved: (value) {
-                        _editedGroup = Group(
-                          groupName: _editedGroup.groupName,
-                          hospitalName: _editedGroup.hospitalName,
-                          departmentName: value,
-                        );
-                      },
-                    ),
-                  ),
-                  Container(
-                    alignment: Alignment.bottomRight,
-                    padding: EdgeInsets.all(12),
-                    child: ElevatedButton(
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(15.0),
                       child: Text(
-                        "Save",
+                        "Enter Group Details",
+                        style: TextStyle(
+                            fontSize: 24,
+                            color: Colors.blueGrey[800],
+                            fontWeight: FontWeight.bold),
                       ),
-                      onPressed: _saveForm,
-
-                      // color: Colors.lightBlue,
-                      // textColor: Colors.white,
                     ),
-                  )
+                  ),
+                  Form(
+                    key: _formKey,
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: <Widget>[
+                        Padding(
+                          padding: const EdgeInsets.only(top: 5),
+                          child: Divider(
+                            height: 2,
+                            thickness: 2,
+                            color: Colors.blue,
+                          ),
+                        ),
+                        ListTile(
+                          leading: Container(
+                            height: double.infinity,
+                            child: Icon(
+                              Icons.group,
+                              color: Colors.black,
+                            ),
+                          ),
+                          title: TextFormField(
+                            initialValue: _initValues['name'],
+                            decoration:
+                                InputDecoration(labelText: 'Group Name'),
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context)
+                                  .requestFocus(_hospitalFocusNode);
+                            },
+                            onSaved: (value) {
+                              _editedGroup = Group(
+                                groupName: value.toString(),
+                                hospitalName: _editedGroup.hospitalName,
+                                departmentName: _editedGroup.departmentName,
+                              );
+                            },
+                            validator: (value) {
+                              if (value!.isEmpty) {
+                                return 'Please provide a name.';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        ListTile(
+                          leading: Container(
+                            height: double.infinity,
+                            child: Icon(
+                              Icons.local_hospital,
+                              color: Colors.black,
+                            ),
+                          ),
+                          title: TextFormField(
+                            initialValue: _initValues['hospital'],
+                            decoration:
+                                InputDecoration(labelText: "Hospital Name"),
+                            textInputAction: TextInputAction.next,
+                            focusNode: _hospitalFocusNode,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context)
+                                  .requestFocus(_departmentFocusNode);
+                            },
+                            onSaved: (value) {
+                              _editedGroup = Group(
+                                groupName: _editedGroup.groupName,
+                                hospitalName: value,
+                                departmentName: _editedGroup.departmentName,
+                              );
+                            },
+                          ),
+                        ),
+                        ListTile(
+                          leading: Container(
+                            height: double.infinity,
+                            child: Icon(
+                              Icons.share,
+                              color: Colors.black,
+                            ),
+                          ),
+                          title: TextFormField(
+                            initialValue: _initValues['department'],
+                            decoration:
+                                InputDecoration(labelText: "Department"),
+                            focusNode: _departmentFocusNode,
+                            onFieldSubmitted: (_) {
+                              _saveForm();
+                            },
+                            onSaved: (value) {
+                              _editedGroup = Group(
+                                groupName: _editedGroup.groupName,
+                                hospitalName: _editedGroup.hospitalName,
+                                departmentName: value,
+                              );
+                            },
+                          ),
+                        ),
+                        Container(
+                          alignment: Alignment.bottomRight,
+                          padding: EdgeInsets.all(12),
+                          child: ElevatedButton(
+                            child: Text(
+                              "Save",
+                            ),
+                            onPressed: _saveForm,
+
+                            // color: Colors.lightBlue,
+                            // textColor: Colors.white,
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
+          );
   }
 }
